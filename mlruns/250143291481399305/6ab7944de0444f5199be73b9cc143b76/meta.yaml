@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/mero6/object_detection/mlruns/250143291481399305/6ab7944de0444f5199be73b9cc143b76/artifacts
+end_time: 1762263543099
+entry_point_name: ''
+experiment_id: '250143291481399305'
+lifecycle_stage: active
+run_id: 6ab7944de0444f5199be73b9cc143b76
+run_name: YOLOv8n_Hypertuned
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762263542978
+status: 3
+tags: []
+user_id: mero6

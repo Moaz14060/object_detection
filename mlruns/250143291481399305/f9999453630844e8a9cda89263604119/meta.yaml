@@ -1,0 +1,14 @@
+artifact_uri: file:///C:/Users/mero6/object_detection/mlruns/250143291481399305/f9999453630844e8a9cda89263604119/artifacts
+end_time: 1762263543235
+entry_point_name: ''
+experiment_id: '250143291481399305'
+lifecycle_stage: active
+run_id: f9999453630844e8a9cda89263604119
+run_name: YOLOv8n_Best
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1762263543103
+status: 3
+tags: []
+user_id: mero6
