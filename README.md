@@ -12,8 +12,8 @@ The application is built as a modern, interactive dashboard using **Streamlit**,
 *   **Interactive Dashboard:** A user-friendly interface built with Streamlit for easy control and visualization.
 *   **Dynamic Visualization:** Features glowing bounding boxes, a blurred background in dark mode, and live statistical charts (object count, average confidence).
 *   **Multiple Input Sources:** Supports detection from USB cameras, IP camera URLs, and image uploads.
-*   **Alert System:** Triggers warnings for high concentrations of detected objects.
 *   **MLOps Ready:** Integrated with **MLflow** for tracking experiments, managing models, and logging performance metrics.
+*   **Performance Tracking:** Includes a dedicated script to log model performance metrics (`mAP`, `IoU`, `Precision`, `Recall`, `F1_score`) to MLflow.
 
 ## Tech Stack / Tools
 
@@ -21,12 +21,13 @@ The core technologies and tools used in this project are:
 
 | Category | Tool/Library | Purpose |
 | :--- | :--- | :--- |
-| **Framework** | Streamlit | Web application framework for the interactive dashboard. |
+| **Framework** | Streamlit | Web application framework for the interactive detection dashboard. |
 | **Model** | YOLOv8n (Ultralytics) | Deep learning model for real-time object detection. |
-| **MLOps** | MLflow | Experiment tracking, model management, and performance logging. |
+| **MLOps** | **MLflow** | **Experiment tracking, model management, and performance logging.** |
 | **Data Analysis** | NumPy, Pandas, Altair | Data manipulation, statistical analysis, and chart generation. |
 | **Computer Vision** | OpenCV (`cv2`) | Handling video streams and image processing. |
 | **Database** | pyodbc, SQL Server | Optional integration for MLOps data logging and monitoring. |
+| **Visualization** | Power BI | External dashboard for visualizing detection data and model metrics. |
 | **Language** | Python 3.8+ | Primary programming language. |
 
 ## Project Structure
@@ -35,10 +36,13 @@ The project is structured as follows:
 
 | Path | Description |
 | :--- | :--- |
-| `src/app.py` | The main Streamlit application file. Handles the UI, camera stream processing, YOLO inference, and visualization logic. |
-| `src/database_connection.py` | Contains the function to establish a connection to a SQL Server database using `pyodbc` and Streamlit secrets for configuration. |
-| `models/` | Directory for storing pre-trained model weights. The application uses `yolov8n.pt`. |
-| `db/database_creation.sql` | SQL script for creating the necessary database tables (e.g., for logging detection data). |
+| `src/app.py` | The main Streamlit application file for real-time detection. |
+| `src/database_connection.py` | Contains the function to establish a connection to a SQL Server database. |
+| `log_models.py` | **MLflow script to log model performance metrics and artifacts.** |
+| `models/` | Directory containing different model weights (`1.pt`, `2.pt`, `best.pt`). |
+| `mlruns/` | **Local MLflow tracking server directory for experiment data and runs.** |
+| `dashboard/` | Contains the Power BI file (`Detections Dashboard.pbix`) for data visualization. |
+| `db/database_creation.sql` | SQL script for creating the necessary database tables. |
 | `requirements.txt` | List of all Python dependencies for easy installation. |
 | `README.md` | This project documentation file. |
 | `LICENSE` | Project license details. |
@@ -99,9 +103,6 @@ Follow these steps to get the project running:
     ```
     ***Note on `pyodbc`:** If you encounter issues installing `pyodbc`, you may need to install the appropriate ODBC driver for your operating system. For a basic run without database logging, you can skip `pyodbc` and comment out the database-related imports in `src/app.py` and `src/database_connection.py`.*
 
-4.  **Model Weights:**
-    The application uses the `yolov8n.pt` model. The `ultralytics` library will automatically download this model the first time it is run if it's not present. No manual download is required.
-
 ## Usage
 
 The application is a Streamlit dashboard and is run using the `streamlit run` command.
@@ -115,13 +116,20 @@ The application is a Streamlit dashboard and is run using the `streamlit run` co
 2.  **Access the Dashboard:**
     The command will open the application in your default web browser (usually at `http://localhost:8501`).
 
-### In-App Usage
+### MLOps Usage (MLflow)
 
-1.  **Control Panel:** Use the sidebar on the left to control the application.
-2.  **Theme Selection:** Choose between "Light Mode" and the cinematic "Dark Mode."
-3.  **Input Source:** Select your input source (USB Camera, IP Camera, or Upload Image).
-4.  **Start/Stop:** Click the **▶️ Start Detection** button to begin the live feed analysis and **⏹️ Stop Detection** to end it.
-5.  **Live Stats:** The right column displays a live table and chart of detected objects and their average confidence scores.
+To log the model performance metrics and artifacts to the local MLflow tracking server:
+
+1.  **Run the logging script:**
+    ```bash
+    python log_models.py
+    ```
+2.  **Start the MLflow UI:**
+    ```bash
+    mlflow ui
+    ```
+3.  **Access MLflow:**
+    Open your browser to `http://localhost:5000` (or the port specified by MLflow) to view the "AutonomousVehicle_ObjectDetection" experiment, model metrics, and logged artifacts.
 
 ## Model Details
 
@@ -133,11 +141,11 @@ The application is a Streamlit dashboard and is run using the `streamlit run` co
 
 ### MLOps and Experiment Tracking (MLflow)
 
-The project incorporates **MLflow** to manage the machine learning lifecycle, specifically for:
+The project uses **MLflow** to manage the machine learning lifecycle, specifically for:
 
-*   **Experiment Tracking:** Logging parameters, metrics (like mAP, IoU, FPS), and artifacts (model checkpoints) during training runs.
-*   **Model Registry:** Storing and versioning the trained YOLO models, including the `best.pt` file found in the `models/` directory.
-*   **Reproducibility:** Ensuring that the environment and code used to produce a model can be easily reproduced.
+*   **Experiment Tracking:** The `log_models.py` script logs key performance indicators (KPIs) for three model variants.
+*   **Metrics Logged:** The script logs `mAP`, `IoU`, `Precision`, `Recall`, and `F1_score` for each model variant, providing a clear comparison of model performance.
+*   **Model Registry:** The MLflow structure is set up to register and version the trained models, facilitating easy deployment and rollback.
 
 ## Results
 
