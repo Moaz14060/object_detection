@@ -9,6 +9,8 @@ import altair as alt
 from ultralytics import YOLO
 import time
 import math
+from datetime import datetime
+import database_connection as db
 
 # ----------------- PAGE CONFIG -----------------
 st.set_page_config(page_title="Smart Object Detection", layout="wide", page_icon="🎯")
@@ -17,7 +19,7 @@ st.set_page_config(page_title="Smart Object Detection", layout="wide", page_icon
 theme = st.sidebar.radio("Choose Theme", ["Light Mode", "Dark Mode"])
 
 # ----------------- LOAD YOLO MODEL -----------------
-model = YOLO("yolov8n.pt")
+model = YOLO(r"F:\object_detection\yolov8s.pt")
 
 # ----------------- SESSION STATE -----------------
 if "run" not in st.session_state: st.session_state.run = False
@@ -37,6 +39,8 @@ def get_glow_color():
 
 # ----------------- DETECTION FUNCTION -----------------
 def detect_object(frame, dark_mode=False):
+    conn = db.get_db_connection()
+    cursor = conn.cursor()
     results = model(frame)
     st.session_state.counter = Counter()
     st.session_state.confidence = defaultdict(list)
@@ -66,6 +70,26 @@ def detect_object(frame, dark_mode=False):
             st.session_state.confidence[model.names[cls]].append(conf)
             if st.session_state.counter[model.names[cls]]>3:
                 alerts.append(f"⚠️ High number of {model.names[cls]} detected!")
+            
+            if cursor:
+                try:
+                    cursor.execute("""
+                        INSERT INTO Detections (Time_Stamp, Object_Name, Count, Confidence)
+                        VALUES (?, ?, ?, ?)
+                    """, (
+                        datetime.now(),
+                        model.names[cls],
+                        st.session_state.counter[model.names[cls]],
+                        round(conf, 2)
+                    ))
+                except Exception as e:
+                    st.error(f"Database insert failed: {e}")
+
+    # Commit once per frame
+    if conn:
+        conn.commit()
+        cursor.close()
+        conn.close()
 
     st.session_state.frames +=1
     return blurred_frame, alerts
@@ -88,8 +112,12 @@ def start_camera(source=0, dark_mode=False):
         rgb_frame = cv2.cvtColor(detected, cv2.COLOR_BGR2RGB)
         frame_placeholder.image(rgb_frame, channels="RGB", use_container_width=True)
 
-        if alerts: [alert_placeholder.warning(a) for a in alerts]
-        else: alert_placeholder.empty()
+    if alerts:
+        for a in alerts:
+            if isinstance(a, str) and a.strip():
+                alert_placeholder.warning(a)
+            else:
+                print(f"⚠️ Ignored alert (not string): {a}")
 
         if st.session_state.counter:
             data=[]
