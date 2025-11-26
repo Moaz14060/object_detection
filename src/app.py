@@ -1,5 +1,5 @@
 # =============================================
-#   SMART OBJECT DETECTION DASHBOARD (النسخة الأصلية + تعديل بسيط جدًا)
+#   SMART OBJECT DETECTION DASHBOARD 
 # =============================================
 
 import streamlit as st
