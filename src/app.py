@@ -17,8 +17,8 @@ from datetime import datetime
 import sqlite3
 
 # ----------------- CONFIG & CONSTANTS -----------------
-DB_NAME = "object_detection.db"
-TEMP_MODEL_PATH = "uploaded_model.pt"
+DB_NAME = "db/sql_lite_db.db"
+TEMP_MODEL_PATH = "models/uploaded_model.pt"
 
 # ----------------- DATABASE FUNCTIONS -----------------
 def init_db():
@@ -191,7 +191,7 @@ def process_uploaded_image(image_file, model, dark_mode):
 
     update_stats_display(st, st)
 
-# ----------------- APPLY THEME CSS (مع تعديل بسيط جدًا للـ Radio في الـ Logs فقط) -----------------
+# ----------------- APPLY THEME CSS -----------------
 def apply_theme(theme):
     if theme == "Dark Mode":
         st.markdown("""
