@@ -1,9 +1,9 @@
 streamlit
-opencv-python
-numpy
-pillow
+opencv-python-headless
+ultralytics
 pandas
 altair
-ultralytics
+streamlit-webrtc
+av
 openpyxl
-
+pillow
