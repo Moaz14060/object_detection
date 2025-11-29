@@ -1,13 +1,7 @@
-streamlit 
-cv2
+streamlit
+opencv-python
 numpy
-PIL
-collections
+pillow
 pandas
 altair
 ultralytics
-time
-math
-io
-datetime
-sqlite3
