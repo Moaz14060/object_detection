@@ -284,8 +284,13 @@ def main():
 
     # Input Handling
     if source_option=="USB Camera":
-        if start_btn: st.session_state.run=True; run_camera_stream(0, st.session_state.dark_mode)
-        if stop_btn: st.session_state.run=False
+        img_file = st.camera_input("Take a picture")
+        if img_file:
+            image = Image.open(img_file)
+            frame = np.array(image)
+            annotated_frame, alerts = detect_objects(frame, st.session_state.model, st.session_state.dark_mode)
+            st.image(annotated_frame, channels="RGB", caption="Detection Result", use_container_width=True)
+            update_stats_display(st, st)
     elif source_option=="IP Camera":
         ip_url = st.sidebar.text_input("Enter IP camera URL")
         if start_btn:
@@ -324,3 +329,4 @@ def main():
 if __name__ == "__main__":
     main()
     
+
