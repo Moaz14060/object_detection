@@ -1,5 +1,6 @@
 # =============================================
 #   SMART OBJECT DETECTION DASHBOARD 
+#   FIXED FOR DEPLOYMENT WITH STREAMLIT-WEBRTC
 # =============================================
 
 import streamlit as st
@@ -15,10 +16,17 @@ import math
 from io import BytesIO
 from datetime import datetime
 import sqlite3
+import av
+from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 
 # ----------------- CONFIG & CONSTANTS -----------------
 DB_NAME = "db/sql_lite_db.db"
 TEMP_MODEL_PATH = "models/uploaded_model.pt"
+
+# RTC Configuration for deployment
+RTC_CONFIGURATION = RTCConfiguration(
+    {"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]}
+)
 
 # ----------------- DATABASE FUNCTIONS -----------------
 def init_db():
@@ -83,11 +91,61 @@ def get_glow_color():
     update_glow_phase()
     return (b, g, r)
 
-# ----------------- OBJECT DETECTION CORE -----------------
-def detect_objects(frame, model, dark_mode=False):
+# ----------------- VIDEO TRANSFORMER CLASS -----------------
+class YOLOVideoTransformer(VideoTransformerBase):
+    def __init__(self):
+        self.model = st.session_state.model
+        self.dark_mode = st.session_state.get("dark_mode", False)
+        self.counter = Counter()
+        self.confidence = defaultdict(list)
+        self.frame_count = 0
+        
+    def recv(self, frame):
+        img = frame.to_ndarray(format="bgr24")
+        
+        # Run YOLO detection
+        results = self.model(img)
+        annotated_frame = img.copy()
+        
+        for r in results:
+            for box in r.boxes:
+                x1, y1, x2, y2 = map(int, box.xyxy[0])
+                cls = int(box.cls[0])
+                conf = float(box.conf[0])
+                object_name = self.model.names[cls]
+                
+                color = (0, 255, 0) if not self.dark_mode else get_glow_color()
+                label = f"{object_name} {conf:.2f}"
+                
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+                cv2.putText(annotated_frame, label, (x1, y1 - 10),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.8, 
+                           (255, 255, 255) if self.dark_mode else (0, 0, 0), 2)
+                
+                current_count = self.counter[object_name] + 1
+                self.counter[object_name] = current_count
+                self.confidence[object_name].append(conf)
+                
+                # Log detection
+                try:
+                    insert_log(object_name, current_count, conf)
+                except:
+                    pass  # Skip if database is locked
+        
+        self.frame_count += 1
+        
+        # Update session state
+        st.session_state.counter = self.counter
+        st.session_state.confidence = self.confidence
+        st.session_state.frames = self.frame_count
+        
+        return av.VideoFrame.from_ndarray(annotated_frame, format="bgr24")
+
+# ----------------- OBJECT DETECTION FOR IMAGES -----------------
+def detect_objects_image(frame, model, dark_mode=False):
     results = model(frame)
-    st.session_state.counter = Counter()
-    st.session_state.confidence = defaultdict(list)
+    counter = Counter()
+    confidence = defaultdict(list)
     alerts = []
     annotated_frame = frame.copy()
 
@@ -105,45 +163,29 @@ def detect_objects(frame, model, dark_mode=False):
             cv2.putText(annotated_frame, label, (x1, y1 - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255) if dark_mode else (0, 0, 0), 2)
 
-            current_count = st.session_state.counter[object_name] + 1
-            st.session_state.counter[object_name] = current_count
-            st.session_state.confidence[object_name].append(conf)
+            current_count = counter[object_name] + 1
+            counter[object_name] = current_count
+            confidence[object_name].append(conf)
 
             insert_log(object_name, current_count, conf)
 
             if current_count > 3:
                 alerts.append(f"High number of {object_name} detected!")
 
-    st.session_state.frames += 1
-    return annotated_frame, alerts
-
-# ----------------- LIVE STATS UI -----------------
-def display_live_stats(alerts):
-    col1, col2 = st.columns([3, 1])
-    frame_ph = col1.empty()
-    stats_exp = col2.expander("Live Stats", expanded=True)
-    chart_ph = stats_exp.empty()
-    table_ph = stats_exp.empty()
-    alert_ph = st.empty()
-
-    if alerts:
-        for alert in alerts:
-            alert_ph.warning(alert)
-
-    return frame_ph, chart_ph, table_ph
+    return annotated_frame, counter, confidence, alerts
 
 # ----------------- UPDATE CHART & TABLE -----------------
-def update_stats_display(chart_ph, table_ph):
-    if st.session_state.counter:
+def display_stats(counter, confidence, frame_count=0):
+    if counter:
         data = []
-        for obj, count in st.session_state.counter.items():
-            avg_conf = round(np.mean(st.session_state.confidence[obj]), 2)
+        for obj, count in counter.items():
+            avg_conf = round(np.mean(confidence[obj]), 2)
             data.append({"Object": obj, "Count": count, "Avg Confidence": avg_conf})
 
         df = pd.DataFrame(data)
-        df["Frames Processed"] = st.session_state.frames
+        df["Frames Processed"] = frame_count
 
-        table_ph.table(df)
+        st.table(df)
 
         chart_color = "#FFA500" if st.session_state.get("dark_mode", False) else "#32CD32"
         chart = alt.Chart(df).mark_bar(color=chart_color).encode(
@@ -151,45 +193,22 @@ def update_stats_display(chart_ph, table_ph):
             y="Count",
             tooltip=["Object", "Count", "Avg Confidence"]
         ).properties(title="Detected Objects Count")
-        chart_ph.altair_chart(chart, use_container_width=True)
-
-# ----------------- CAMERA STREAM LOOP -----------------
-def run_camera_stream(source, dark_mode):
-    frame_ph, chart_ph, table_ph = display_live_stats([])
-
-    cap = cv2.VideoCapture(source)
-    while st.session_state.run:
-        ret, frame = cap.read()
-        if not ret:
-            st.error("Failed to grab frame.")
-            break
-
-        annotated_frame, alerts = detect_objects(frame, st.session_state.model, dark_mode)
-        rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
-        frame_ph.image(rgb_frame, channels="RGB", use_container_width=True)
-
-        if alerts:
-            for alert in alerts:
-                st.warning(alert)
-
-        update_stats_display(chart_ph, table_ph)
-        time.sleep(0.02)
-
-    cap.release()
-    st.rerun()
+        st.altair_chart(chart, use_container_width=True)
 
 # ----------------- IMAGE UPLOAD PROCESSING -----------------
 def process_uploaded_image(image_file, model, dark_mode):
     image = Image.open(image_file)
     frame = np.array(image)
-    annotated_frame, alerts = detect_objects(frame, model, dark_mode)
+    annotated_frame, counter, confidence, alerts = detect_objects_image(frame, model, dark_mode)
 
     st.image(annotated_frame, channels="RGB", caption="Detection Result", use_container_width=True)
+    
     if alerts:
         for a in alerts:
             st.warning(a)
-
-    update_stats_display(st, st)
+    
+    with st.expander("Detection Statistics", expanded=True):
+        display_stats(counter, confidence)
 
 # ----------------- APPLY THEME CSS -----------------
 def apply_theme(theme):
@@ -212,7 +231,6 @@ def apply_theme(theme):
         div[role="radiogroup"] label, div[role="radiogroup"] span, div[role="group"] label, div[role="group"] span { color: white !important; }
         div.stDownloadButton>button { color: white !important; background: linear-gradient(to right, #FF512F, #DD2476); }
 
-        /* التعديل الوحيد المطلوب: كلمات All Data, Object Name, Date Range تكون بيضاء 100% */
         div[role="radiogroup"] label {
             color: white !important;
             font-weight: 600 !important;
@@ -258,69 +276,129 @@ def show_logs_tab():
 
 # ----------------- MAIN APP -----------------
 def main():
-    st.set_page_config(page_title="Smart Object Detection", layout="wide", page_icon="Camera")
+    st.set_page_config(page_title="Smart Object Detection", layout="wide", page_icon="📷")
 
     # Initialize
     init_db()
-    if "run" not in st.session_state: st.session_state.run = False
     if "counter" not in st.session_state: st.session_state.counter = Counter()
     if "confidence" not in st.session_state: st.session_state.confidence = defaultdict(list)
     if "frames" not in st.session_state: st.session_state.frames = 0
     if "glow_phase" not in st.session_state: st.session_state.glow_phase = 0
 
     # Sidebar
-    st.sidebar.title("Control Panel")
+    st.sidebar.title("🎛️ Control Panel")
     theme = st.sidebar.radio("Choose Theme", ["Light Mode", "Dark Mode"])
     st.session_state.dark_mode = (theme == "Dark Mode")
     apply_theme(theme)
 
     st.session_state.model = load_yolo_model()
 
-    source_option = st.sidebar.radio("Input Source", ["USB Camera","IP Camera","Upload Image"])
-    start_btn = st.sidebar.button("Start Detection")
-    stop_btn = st.sidebar.button("Stop Detection")
+    source_option = st.sidebar.radio("Input Source", ["Webcam (Deployed)","Upload Image"])
 
-    st.title("Smart Object Detection Dashboard")
+    st.title("📹 Smart Object Detection Dashboard")
 
     # Input Handling
-    if source_option=="USB Camera":
-        if start_btn: st.session_state.run=True; run_camera_stream(0, st.session_state.dark_mode)
-        if stop_btn: st.session_state.run=False
-    elif source_option=="IP Camera":
-        ip_url = st.sidebar.text_input("Enter IP camera URL")
-        if start_btn:
-            if ip_url: st.session_state.run=True; run_camera_stream(ip_url, st.session_state.dark_mode)
-            else: st.warning("Please enter a valid IP camera URL.")
-        if stop_btn: st.session_state.run=False
-    elif source_option=="Upload Image":
+    if source_option == "Webcam (Deployed)":
+        st.markdown("### 🎥 Live Webcam Detection")
+        st.info("Click 'START' to begin webcam detection. Works on deployed apps!")
+        
+        # Create columns for layout
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            webrtc_ctx = webrtc_streamer(
+                key="object-detection",
+                video_transformer_factory=YOLOVideoTransformer,
+                rtc_configuration=RTC_CONFIGURATION,
+                media_stream_constraints={"video": True, "audio": False},
+                async_processing=True,
+            )
+        
+        with col2:
+            st.markdown("### 📊 Live Stats")
+            if webrtc_ctx.state.playing:
+                stats_placeholder = st.empty()
+                
+                # Display stats periodically
+                while webrtc_ctx.state.playing:
+                    with stats_placeholder.container():
+                        display_stats(
+                            st.session_state.counter,
+                            st.session_state.confidence,
+                            st.session_state.frames
+                        )
+                    time.sleep(1)
+                    
+    elif source_option == "Upload Image":
+        st.markdown("### 🖼️ Image Upload Detection")
         uploaded = st.file_uploader("Upload an image", type=["jpg","jpeg","png"])
         if uploaded:
             process_uploaded_image(uploaded, st.session_state.model, st.session_state.dark_mode)
 
     # Tabs
+    st.markdown("---")
     about_tabs = st.tabs(["Overview","How It Works","Model Info","Tips & Tricks","Future Improvements","References","Logs"])
 
     with about_tabs[0]:
-        st.markdown("**Project Overview:** YOLOv8 detection, glowing bounding boxes in Dark Mode, live stats, alerts, modern cinematic dashboard.")
+        st.markdown("""
+        **Project Overview:** 
+        - YOLOv8 real-time object detection
+        - Works on deployed Streamlit apps using WebRTC
+        - Glowing bounding boxes in Dark Mode
+        - Live statistics and alerts
+        - Modern cinematic dashboard design
+        """)
 
     with about_tabs[1]:
-        st.markdown("- Capture frame from camera or image.\n- YOLOv8 detects objects.\n- Display frame with glowing bounding boxes.\n- Update live stats and charts.")
+        st.markdown("""
+        **How It Works:**
+        1. Webcam stream captured via WebRTC (works remotely!)
+        2. Each frame processed by YOLOv8 model
+        3. Objects detected with bounding boxes
+        4. Live statistics updated in real-time
+        5. All detections logged to database
+        """)
 
     with about_tabs[2]:
-        st.markdown("- YOLOv8 nano model (`yolov8n.pt`) - lightweight & fast.")
+        st.markdown("""
+        **Model Information:**
+        - Default: YOLOv8 nano (`yolov8n.pt`) - lightweight & fast
+        - Upload custom models via sidebar
+        - Supports all YOLOv8 model variants
+        """)
 
     with about_tabs[3]:
-        st.markdown("- Good lighting improves detection accuracy.\n- Keep camera steady.\n- High-resolution images improve results.")
+        st.markdown("""
+        **Tips & Tricks:**
+        - ✅ Good lighting improves detection accuracy
+        - ✅ Keep camera steady for best results
+        - ✅ Allow camera permissions when prompted
+        - ✅ Use high-resolution cameras for better detection
+        - ✅ Try Dark Mode for a cinematic experience!
+        """)
 
     with about_tabs[4]:
-        st.markdown("- Support multiple cameras simultaneously.\n- Add sound alerts.\n- Recording feature.\n- Cloud storage & analysis.")
+        st.markdown("""
+        **Future Improvements:**
+        - 🔄 Support multiple simultaneous cameras
+        - 🔊 Sound alerts for specific objects
+        - 📹 Recording feature with video download
+        - ☁️ Cloud storage integration
+        - 📈 Advanced analytics dashboard
+        - 🤖 Custom model training interface
+        """)
 
     with about_tabs[5]:
-        st.markdown("- Ultralytics YOLO\n- Computer Vision & Deep Learning references.")
+        st.markdown("""
+        **References:**
+        - [Ultralytics YOLO](https://github.com/ultralytics/ultralytics)
+        - [Streamlit WebRTC](https://github.com/whitphx/streamlit-webrtc)
+        - [OpenCV Documentation](https://opencv.org/)
+        - Computer Vision & Deep Learning references
+        """)
 
     with about_tabs[6]:
         show_logs_tab()
 
 if __name__ == "__main__":
     main()
-    
