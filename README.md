@@ -25,7 +25,7 @@ Experience the real-time object detection dashboard directly:
 
 [**Streamlit App: Object Detection Demo**](https://objectdetection-erv7rq3koga6qoq6qhhnsd.streamlit.app/)
 
-> **Note on Usage:** This live application is hosted on a cloud platform (Streamlit Cloud) and serves as a fully functional alternative to running the repository locally. Due to the cloud hosting environment, the option to connect via a local IP address is not available. Please use the provided URL for access.
+> **Note on Usage:** This live application is hosted on a cloud platform (Streamlit Cloud) and serves as a fully functional alternative to running the repository locally. Due to the cloud hosting environment, the option to connect via a local IP address is not available as well as a USB camera since it's not on the same cloud server. You can use the option to upload a picture for the model to detect objects in. Please use the provided URL for access.
 
 ### 2. Power BI Dashboard
 
