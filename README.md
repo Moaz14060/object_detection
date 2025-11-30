@@ -120,7 +120,7 @@ Follow these steps to get the project running:
     pip install -r requirements.txt
     ```
     
-    > **Note on `pyodbc`:** If you encounter issues installing `pyodbc`, you may need to install the appropriate ODBC driver for your operating system. For a basic run without SQL Server data logging, you can temporarily skip `pyodbc` and comment out the database-related imports in `src/app.py` and `src/database_connection.py`.
+    > **Note on `pyodbc`:** If you encounter issues installing `pyodbc`, you may need to install the appropriate ODBC driver for your operating system. For a basic run without SQL Server data logging, you can temporarily skip `pyodbc` and comment out the database-related imports in `src/app.py` and `src/database_connection.py`. You can use **sqlite** databae integrated in the streamlit app if there are errors. 
 
 ## Usage
 
