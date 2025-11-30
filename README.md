@@ -54,7 +54,7 @@ The project utilizes a dual-database approach to manage both production-level ML
 
 | Database | Primary Use Case | Integration Details |
 | :--- | :--- | :--- |
-| **SQL Server** | **Production MLOps Data Logging** | Used for persistent storage of detection results, performance metrics, and other critical data in a production or enterprise environment. The `src/database_connection.py` file is designed to connect to this server using `pyodbc`. |
+| **SQL Server** | **Production MLOps Data Logging** | Used for persistent storage of detection results, performance metrics, and other critical data in a production or enterprise environment. The `src/database_connection.py` file is designed to connect to this server using `pyodbc`. You will need a `.streamlit` folder to store a `secrets` file that contains the server, driver, username, password and database's name|
 | **SQLite** | **Local MLflow Tracking** | Used by default by MLflow to store local experiment metadata, parameters, and metrics within the `mlruns/` directory. This provides a lightweight, file-based database for development and local testing. |
 
 ## Project Structure
@@ -67,7 +67,7 @@ The repository is organized into the following directories and key files:
 | `src/app.py` | The main Streamlit application file for the real-time object detection dashboard. |
 | `src/database_connection.py` | Contains the function to establish a connection to the SQL Server database. |
 | `log_models.py` | A standalone script utilizing MLflow to log model performance metrics and artifacts. |
-| `models/` | Directory containing different model weights (e.g., `1.pt`, `2.pt`, `best.pt`). |
+| `models/` | Directory containing different model weights (e.g., `combined_68.pt`, `roboflow_85.pt`, `yolov8n.pt`). |
 | `mlruns/` | **Local MLflow tracking server directory for experiment data and runs (uses SQLite internally).** |
 | `dashboard/` | Contains the Power BI file (`Detections Dashboard.pbix`) used for external data visualization. |
 | `db/` | Contains database-related scripts and files. |
