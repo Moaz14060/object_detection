@@ -40,7 +40,7 @@ The core technologies and tools used in this project are:
 | Category | Tool/Library | Purpose |
 | :--- | :--- | :--- |
 | **Framework** | Streamlit | Web application framework for the interactive detection dashboard. |
-| **Model** | YOLOv8n (Ultralytics) | Deep learning model for real-time object detection. |
+| **Models** | YOLOv8 (Ultralytics) & SSD | Deep learning model for real-time object detection. |
 | **MLOps** | **MLflow** | **Experiment tracking, model management, and performance logging.** |
 | **Data Analysis** | NumPy, Pandas, Altair | Data manipulation, statistical analysis, and chart generation. |
 | **Computer Vision** | OpenCV (`cv2`) | Handling video streams and image processing. |
@@ -72,6 +72,7 @@ The repository is organized into the following directories and key files:
 | `dashboard/` | Contains the Power BI file (`Detections Dashboard.pbix`) used for external data visualization. |
 | `db/` | Contains database-related scripts and files. |
 | `db/database_creation.sql` | SQL script for creating the necessary tables in the SQL Server database. |
+| `experiments` | Experiments conducted for training different models on different datasets. |
 | `.gitignore` | Specifies files and directories to be ignored by Git. |
 | `requirements.txt` | List of all Python dependencies for easy installation. |
 | `LICENSE` | Project license details (MIT License). |
@@ -155,7 +156,7 @@ To log the model performance metrics and artifacts to the local MLflow tracking 
 
 ### Object Detection Model
 
-*   **Model:** YOLOv8n (You Only Look Once, version 8, nano variant)
+*   **Model:** YOLOv8 and it's variants (You Only Look Once, version 8), SSD (Single Shot Detector)
 *   **Framework:** Ultralytics
 *   **Purpose:** Chosen for its balance of speed and accuracy, making it suitable for real-time, low-latency inference required in autonomous vehicle applications.
 
@@ -173,8 +174,8 @@ This project is licensed under the **MIT License**. See the `LICENSE` file for d
 
 ## Authors
 
-*   Moaz Ahmed Abdel Ghaffar
 *   Salma Ayman
-*   Mohamed Ashraf Abdel-Aziz
 *   Shahd Medhat
+*   Mohamed Ashraf Abdel-Aziz
 *   Mohamed Ibrahim
+*   Moaz Ahmed Abdel Ghaffar
