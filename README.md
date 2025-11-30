@@ -156,7 +156,7 @@ To log the model performance metrics and artifacts to the local MLflow tracking 
 
 ### Object Detection Model
 
-*   **Model:** YOLOv8 and it's variants (You Only Look Once, version 8), SSD (Single Shot Detector)
+*   **Model:** YOLOv8 and it's variants (You Only Look Once, version 8)
 *   **Framework:** Ultralytics
 *   **Purpose:** Chosen for its balance of speed and accuracy, making it suitable for real-time, low-latency inference required in autonomous vehicle applications.
 
