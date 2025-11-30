@@ -67,7 +67,7 @@ The repository is organized into the following directories and key files:
 | `src/app.py` | The main Streamlit application file for the real-time object detection dashboard. |
 | `src/database_connection.py` | Contains the function to establish a connection to the SQL Server database. |
 | `log_models.py` | A standalone script utilizing MLflow to log model performance metrics and artifacts. |
-| `models/` | Directory containing different model weights (e.g., `combined_68.pt`, `roboflow_85.pt`, `yolov8n.pt`). |
+| `models/` | Directory containing different model weights (e.g., `combined_68.pt`, `roboflow_86.pt`, `yolov8n.pt`). |
 | `mlruns/` | **Local MLflow tracking server directory for experiment data and runs (uses SQLite internally).** |
 | `dashboard/` | Contains the Power BI file (`Detections Dashboard.pbix`) used for external data visualization. |
 | `db/` | Contains database-related scripts and files. |
