@@ -8,7 +8,7 @@ The application is presented as a modern, interactive dashboard built with **Str
 
 ## Key Features
 
-*   **Real-Time Detection:** Utilizes the lightweight **YOLOv8n** model for fast, real-time object detection.
+*   **Real-Time Detection:** Utilizes the lightweight **YOLOv8** model for fast, real-time object detection.
 *   **Interactive Dashboard:** A user-friendly interface built with Streamlit for easy control and visualization.
 *   **Dynamic Visualization:** Features glowing bounding boxes, a blurred background in dark mode, and live statistical charts (object count, average confidence).
 *   **Multiple Input Sources:** Supports detection from USB cameras, IP camera URLs, and image uploads.
